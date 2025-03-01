@@ -172,61 +172,76 @@ Phase 3: Deadlock Creation
 using System;
 using System.Threading;
 
-class BankAccount
-{
-    public decimal Balance { get; private set; };
-    public readonly object LockObject = new object();
+    using System;
+    using System.Threading;
 
-    public BankAccount(decimal initialBalance)
+    class BankAccount
     {
-        Balance = initialBalance;
-    }
+        public decimal Balance { get; private set; }
+        public readonly object LockObject = new object();
 
-    public void Withdraw(decimal amount)
-    {
-        Balance -= amount;
-    }
+        public BankAccount(decimal initialBalance)
+        {
+            Balance = initialBalance;
+        }
 
-    public void Deposit(decimal amount)
-    {
-        Balance += amount;
-    }
-}
+        public void Withdraw(decimal amount)
+        {
+            Balance -= amount;
+        }
 
-class Program
-{
-    static void Transfer(BankAccount fromAccount, BankAccount toAccount, decimal amount)
-    {
-        lock (fromAccount.LockObject){
-            Console.WriteLine($"Locked {fromAccount.GetHashCode()} for withdrawing...");
-            Thread.Sleep(100);
-            lock (toAccount.LockObject)
-            }
-            {
-                Console.WriteLine($"Locked {toAccount.GetHashCode()} for depositing...");
-                fromAccount.Withdraw(amount);
-                toAccount.Deposit(amount);
-                Console.WriteLine($"Transferred {amount} from Account {fromAccount.GetHashCode()} to Account {toAccount.GetHashCode()}");
-            }
+        public void Deposit(decimal amount)
+        {
+            Balance += amount;
         }
     }
 
-    static void Main()
+    class Program
     {
-        BankAccount accountA = new BankAccount(1000);
-        BankAccount accountB = new BankAccount(2000);
+        static void Transfer(BankAccount fromAccount, BankAccount toAccount, decimal amount)
+        {
+            // Lock the first account
+            lock (fromAccount.LockObject)
+            {
+                Console.WriteLine($"Locked {fromAccount.GetHashCode()} for withdrawing...");
 
-        Thread t1 = new Thread(() => Transfer(accountA, accountB, 100));
-        Thread t2 = new Thread(() => Transfer(accountB, accountA, 200));
+                // Simulate some processing time
+                Thread.Sleep(100);
 
-        t1.Start();
-        t2.Start();
+                // Attempt to lock the second account
+                lock (toAccount.LockObject)
+                {
+                    Console.WriteLine($"Locked {toAccount.GetHashCode()} for depositing...");
 
-        t1.Join();
-        t2.Join();
+                    // Transfer the amount
+                    fromAccount.Withdraw(amount);
+                    toAccount.Deposit(amount);
 
-        Console.WriteLine("Final Balance of Account A: " + accountA.Balance);
-        Console.WriteLine("Final Balance of Account B: " + accountB.Balance);
+                    Console.WriteLine($"Transferred {amount} from Account {fromAccount.GetHashCode()} to Account {toAccount.GetHashCode()}");
+                }
+            }
+        }
+
+        static void Main()
+        {
+            BankAccount accountA = new BankAccount(1000);
+            BankAccount accountB = new BankAccount(2000);
+
+            // Thread 1: Transfers 100 from A to B
+            Thread t1 = new Thread(() => Transfer(accountA, accountB, 100));
+
+            // Thread 2: Transfers 200 from B to A
+            Thread t2 = new Thread(() => Transfer(accountB, accountA, 200));
+
+            t1.Start();
+            t2.Start();
+
+            t1.Join();
+            t2.Join();
+
+            Console.WriteLine("Final Balance of Account A: " + accountA.Balance);
+            Console.WriteLine("Final Balance of Account B: " + accountB.Balance);
+        }
     }
 }
 Phase 4: Deadlock Prevention and Resolution
